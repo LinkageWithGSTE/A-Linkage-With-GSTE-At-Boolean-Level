@@ -38,21 +38,21 @@ We propose a new parameterized hardware verification algorithm through a term-le
 ## The code structure
 
 ```
-├── tools.fl						Necessary Utils in specfication and assertion computation
-├── trajEval.fl						Encapsulation and Extension of origin Forte
-├── invType.fl						Encapsulation of inv concept in our GSTE framework
-├── counter							The first case study - counter
-│   ├── circuit						Verilog and Netlist of counter
-│   │   ├── counter.blif			Blif netlist
-│   │   ├── counter.exe				Model required by Forte
-│   │   ├── counter.exlif			Exlif netlist required by Forte
-│   │   └── counter.v				Initial verilog
-│   ├── gen_sol.py					Convert specification in GSTE to bit-level
-│   ├── loadInv.fl					Load the information in GSTE to Forte
-│   ├── run.fl						Run the verification without optimization
-│   ├── run.sh						Running shell
-│   └── run_opt.fl					Run the verification without optimization
-├── rbFIFO							The second case study - rbFIFO (structure same as above)
+├── tools.fl            //Necessary Utils in specfication and assertion computation
+├── trajEval.fl            //Encapsulation and Extension of origin Forte
+├── invType.fl          //Encapsulation of inv concept in our GSTE framework
+├── counter          //The first case study - counter
+│   ├── circuit            //Verilog and Netlist of counter
+│   │   ├── counter.blif            //Blif netlist
+│   │   ├── counter.exe          //Model required by Forte
+│   │   ├── counter.exlif           //Exlif netlist required by Forte
+│   │   └── counter.v            //Initial verilog
+│   ├── gen_sol.py            //Convert specification in GSTE to bit-level
+│   ├── loadInv.fl            //Load the information in GSTE to Forte
+│   ├── run.fl          //Run the verification without optimization
+│   ├── run.sh          //Running shell
+│   └── run_opt.fl            //Run the verification without optimization
+├── rbFIFO              //The second case study - rbFIFO (structure same as above)
 │   ├── circuit
 │   │   ├── rbFIFO.blif
 │   │   ├── rbFIFO.exe
@@ -63,7 +63,7 @@ We propose a new parameterized hardware verification algorithm through a term-le
 │   ├── run.fl
 │   ├── run.sh
 │   └── run_opt.fl
-├── srFIFO							The third case study - srFIFO (structure same as above)
+├── srFIFO              //The third case study - srFIFO (structure same as above)
 │   ├── circuit
 │   │   ├── srFIFO.blif
 │   │   ├── srFIFO.exe
@@ -74,7 +74,7 @@ We propose a new parameterized hardware verification algorithm through a term-le
 │   ├── run.fl
 │   ├── run.sh
 │   └── run_opt.fl
-├── dsmem 							The forth case study - dsmem (structure same as above)
+├── dsmem               //The forth case study - dsmem (structure same as above)
 │   ├── circuit
 │   │   ├── dsmem.blif
 │   │   ├── dsmem.exe
@@ -85,7 +85,7 @@ We propose a new parameterized hardware verification algorithm through a term-le
 │   ├── run.fl
 │   ├── run.sh
 │   └── run_opt.fl
-└── yosysBlif2Exlif.py              A tool to convert blif to exlif (required in Forte)
+└── yosysBlif2Exlif.py           //A tool to convert blif to exlif (required in Forte)
 ```
 
 
