@@ -1,0 +1,66 @@
+load "loadInv.fl";
+let option = "-S -w -y";
+
+
+letrec invform2trajform_ant (boolIs (BOOLEAN v) c) = 
+        let node = v in 
+        let var = bvariable v in 
+        Isb var node 
+    /\ invform2trajform_ant (bitvecIs (BITVEC v i) c) =
+        let node = map (\i. v^"<"^(int2str i)^">") (0 upto (i-1)) in 
+        let var = map (\i. bvariable (v^"<"^(int2str i)^">")) (0 upto (i-1)) in  
+        node bvAre var
+    /\ invform2trajform_ant (arrayIs (ARRAY v i1 i2) a c) = 
+        let node adr = map (\d. v^"<"^(int2str adr)^">"^"<"^(int2str d)^">") (0 upto (i2-1)) in 
+        let var adr  = map (\d. bvariable (v^"<"^(int2str adr)^">"^"<"^(int2str d)^">")) (0 upto (i2-1)) in
+        let nodes = node a in 
+        let vars = var a in 
+        nodes bvAre vars 
+;
+letrec inv2trajform_ant [] = [Chaos]
+    /\ inv2trajform_ant (x:xs) = (invform2trajform_ant x):(inv2trajform_ant xs) ;
+
+
+//******consequence******
+letrec invform2trajform_consequence (boolIs (BOOLEAN v) c) = 
+        let node = v in 
+        let var = bvariable (v^"_") in 
+        Next (Isb var node )
+    /\ invform2trajform_consequence (bitvecIs (BITVEC v i) c) =
+        let node = map (\i. v^"<"^(int2str i)^">") (0 upto (i-1)) in 
+        let var = map (\i. bvariable (v^"<"^(int2str i)^">_")) (0 upto (i-1)) in  
+        Next (node bvAre var)
+    /\ invform2trajform_consequence (arrayIs (ARRAY v i1 i2) a c) = 
+        let node adr = map (\d. v^"<"^(int2str adr)^">"^"<"^(int2str d)^">") (0 upto (i2-1)) in 
+        let var adr  = map (\d. bvariable (v^"<"^(int2str adr)^">"^"<"^(int2str d)^">_")) (0 upto (i2-1)) in
+        let nodes = node a in 
+        let vars = var a in 
+        Next (nodes bvAre vars )
+;
+
+letrec inv2trajform_consequence [] = []
+    /\ inv2trajform_consequence (x:xs) = (invform2trajform_consequence x):(inv2trajform_consequence xs) ;
+
+
+
+let check_edge source sink = 
+    let inv_source  = get_inv tbl source in 
+    let inv_sink = get_inv tbl sink in
+    let input_ant = input_ant source sink in 
+    let inv_ant_t = TAndList (inv2trajform_ant (hd inv_source)) in 
+    let ant_t = TAndList [inv_ant_t,input_ant] in 
+    let cons_t = TAndList (inv2trajform_consequence (hd inv_sink)) in 
+    let ant = trajForm2FiveTuples  ant_t in 
+    let cons = trajForm2FiveTuples cons_t in 
+
+    let cnstr_input = input_constraint source sink in 
+    let cnstr_mu = ors(map (\t. inv2trajform_constraint_ant t) inv_source) in
+    let cnstr_nmu = ors(map (\t. inv2trajform_constraint_consequence t) inv_sink) in 
+    let cnstr = cnstr_input bAND cnstr_mu bAND  cnstr_nmu in 
+    uSTE option ckt [] ant cons []  [cnstr] source  sink  
+;
+
+map (\(EDGE source sink). check_edge source sink) (edge_list);
+
+quit;
+

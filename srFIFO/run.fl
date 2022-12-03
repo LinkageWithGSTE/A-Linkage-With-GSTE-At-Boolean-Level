@@ -1,0 +1,24 @@
+load "loadInv3153.fl";
+let option = "-S -w -y";
+
+
+let check_edge source sink = 
+    let inv_source  = get_inv tbl source in 
+    let inv_sink = get_inv tbl sink in
+    let input_ant = input_ant source sink in 
+    let inv_ant_t = inv_ant_t in 
+    let ant_t = TAndList [inv_ant_t,input_ant] in 
+    let cons_t = TAndList (inv2trajform_consequence (hd inv_sink)) in 
+    let ant = trajForm2FiveTuples  ant_t in 
+    let cons = trajForm2FiveTuples cons_t in 
+
+    let cnstr_input = input_constraint source sink in 
+    let cnstr_mu = ors(map (\t. inv2trajform_constraint_ant t) inv_source) in
+    let cnstr_nmu = ors(map (\t. inv2trajform_constraint_consequence t) inv_sink) in 
+    let cnstr = cnstr_input bAND cnstr_mu bAND  cnstr_nmu bAND Trans in 
+    uSTE option ckt [] ant cons []  [cnstr] source  sink  
+;
+
+
+map (\(EDGE source sink). check_edge source sink) (edge_list);
+quit;

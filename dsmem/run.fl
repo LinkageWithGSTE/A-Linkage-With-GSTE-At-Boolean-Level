@@ -1,0 +1,8 @@
+load "loadInv.fl";
+let option = "-S -w -y";
+
+
+map (\(EDGE source sink). check_edge source sink) (edge_list);
+
+quit;
+

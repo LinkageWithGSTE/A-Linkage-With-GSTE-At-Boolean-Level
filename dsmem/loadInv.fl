@@ -1,0 +1,130 @@
+let ckt = load_exe "./case/dsmem3153.exe";
+load "../trajEval.fl";
+load "../tools.fl";
+load "../invType.fl";
+
+
+let MSBA = 3;
+let MSBD = 3;
+let LAST = 15;
+
+
+//*************** load Transition  ***********
+
+let model = load_exe "./case/dsmem3153.exe";
+let outs  = (model_outputs model) @ (model_latches model);
+let inps  = (model_inputs  model) @ (model_latches model);
+let bant_list   =
+    (map (\node. (bT, node, bvariable node, 0, 1)) inps) @
+    (map (\node. (bT, node, bvariable (node^"_"), 1, 2)) inps)
+;
+
+let bweak_list  = map (\node.(bT,node,0,2)) inps;
+let btrace_list = map (\node.(node, 1,2)) outs;
+bSTE "-s -w -y" model bweak_list bant_list [] btrace_list;
+
+let get_T model node =
+    val (Vh,Vl) = get_excitation_btrace_val model node 1 in 
+    (Vh = (bNOT Vl)) => 
+        (bvariable (node^"_")) bXNOR Vh 
+        | bF
+;
+
+
+let T_list = map (\node. get_T model node) outs;
+let Trans = ands T_list;
+
+//************ load Inv from sol ***********
+
+
+let fin = fopen "sol" "r";
+
+
+//letrec list2str_ [] = ""
+//    /\ list2str_ (x:xs) = x^" - "^(list2str_ xs);
+
+
+letrec rec_filter fin  =
+    let s = fgets fin then 
+    (feof fin) => ""
+    | s^(rec_filter fin)
+;
+
+let str2bTF "False" = bF 
+    /\ str2bTF "True" = bT
+;
+
+//bv head 0,bv tail 1,b empty False,b full False,a mem 0 D
+let str2inv s =
+    let f l = 
+        (hd l) = "b" => 
+            let name = el 2 l in 
+            let value = el 3 l in 
+            (boolIs (BOOLEAN name) (str2bTF value))
+        |(hd l) = "bv" => 
+            let name = el 2 l in 
+            let value = el 3 l in 
+            (bitvecIs (BITVEC name (MSBA+1)) (str2int value))
+        |
+            let name = el 2 l in 
+            let idx = str2int (el 3 l) in 
+            let value = el 4 l in 
+            (arrayIs (ARRAY name (2**(MSBA+1)) (MSBD+1)) idx  value)
+    in
+    let s_l = str_split s "," in
+    map (\n. f (str_split n " ")) s_l ; 
+
+
+letrec gen [] = tbl_create 0
+    /\ gen (x:xs) = 
+        let x = str_substr x 2 ((strlen x)-2) in
+        let sol_l = str_split x "\n" in 
+        let vertex = str2int (hd sol_l) in 
+        let sol_l = tl sol_l in 
+        let sol_l = map (\n. str2inv n) sol_l in
+        tbl_insert (gen xs) vertex sol_l ;
+
+
+let get_inv tbl key = 
+    let keys = tbl_keys tbl in 
+    let is_in = mem key keys in 
+    is_in => tbl_element tbl key | [[]]
+;
+
+
+let s = rec_filter fin ;
+let l = str_split s ";";
+let tbl = gen  l;
+
+let inv_ant_t = TAndList (inv2trajform_ant (hd (get_inv tbl 4))) ;
+
+
+//***********load input***********
+let clk = TAndList [Isb (bvariable "CLK") "CLK", Next (Isb (bvariable "CLK_") "CLK")];
+let rst = Isb (bvariable "rst") "rst";
+let shift = Isb (bvariable "shift") "shift";
+let dataInNode = map (\d. "d<"^(int2str d)^">") (0 upto MSBD) ;
+let D = map (\i. bvariable ("D<"^(int2str i)^">")) (0 upto MSBD) ;
+let push_data = dataInNode bvAre D;
+
+let input_ant source sink =
+    source = 0 => TAndList [clk,rst] 
+    | source = sink => TAndList [clk,rst,shift]
+    | TAndList [clk,rst,shift,push_data]
+    ;
+;
+
+let input_constraint source sink =
+    source = 0 => (bNOT (bvariable "CLK")) bAND (bvariable "CLK_") bAND (bvariable "rst") 
+    | source = sink => (bNOT (bvariable "CLK")) bAND (bvariable "CLK_") bAND (bNOT (bvariable "rst")) bAND (bNOT (bvariable "shift")) 
+    |  (bNOT (bvariable "CLK")) bAND (bvariable "CLK_") bAND (bNOT (bvariable "rst")) bAND (bvariable "shift")
+    ;
+
+    
+
+let edge_list = 
+    (map (\i. EDGE i (i+1)) (0 upto LAST)) @
+    (map (\i. EDGE i i) (1 upto (LAST+1)))
+    ;
+
+

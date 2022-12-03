@@ -1,0 +1,108 @@
+
+lettype invVar = 
+      BOOLEAN string 
+    | BITVEC string int
+    | ARRAY string int int 
+    ;
+
+letrec invVar2str (BOOLEAN v) = v
+    /\ invVar2str (BITVEC v i) =  v 
+    /\ invVar2str (ARRAY v i1 i2) = v ;
+install_print_function invVar2str;
+
+
+//*** boolIs full bF 
+//*** bitvecIs head 1 
+//*** arrayIs mem 1 "D"
+lettype invForm =
+      boolIs invVar bexpr
+    | bitvecIs invVar int 
+    | arrayIs invVar  int string
+;
+
+letrec invForm2str (boolIs v1 v2 ) = (invVar2str v1)^" == "^(bexpr2str 2 v2)
+    /\ invForm2str (bitvecIs v1 v2) = (invVar2str v1)^" == "^(int2str v2)
+    /\ invForm2str (arrayIs v  adr data) = (invVar2str v)^"["^(int2str adr)^"] == "^data
+    ;
+install_print_function invForm2str;
+
+
+
+lettype edge_t = EDGE int int;
+let edge_t2str (EDGE source sink) = (int2str source)^"-"^(int2str sink);
+install_print_function edge_t2str;
+
+
+//******ant******
+letrec invform2trajform_ant (boolIs (BOOLEAN v) c) = 
+        let node = v in 
+        let var = bvariable v in 
+        Isb var node 
+    /\ invform2trajform_ant (bitvecIs (BITVEC v i) c) =
+        let node = map (\i. v^"<"^(int2str i)^">") (0 upto (i-1)) in 
+        let var = map (\i. bvariable (v^"<"^(int2str i)^">")) (0 upto (i-1)) in  
+        node bvAre var
+    /\ invform2trajform_ant (arrayIs (ARRAY v i1 i2) a c) = 
+        let node adr = map (\d. v^"<"^(int2str adr)^">"^"<"^(int2str d)^">") (0 upto (i2-1)) in 
+        let var adr  = map (\d. bvariable (v^"<"^(int2str adr)^">"^"<"^(int2str d)^">")) (0 upto (i2-1)) in
+        let nodes = map3 (\i. node i) (0 upto (i1-1)) in 
+        let vars = map3  (\i. var i) (0 upto (i1-1)) in 
+        nodes bvAre vars 
+;
+
+letrec inv2trajform_ant [] = [Chaos]
+    /\ inv2trajform_ant (x:xs) = (invform2trajform_ant x):(inv2trajform_ant xs) ;
+
+//******consequence******
+letrec invform2trajform_consequence (boolIs (BOOLEAN v) c) = 
+        let node = v in 
+        let var = bvariable (v^"_") in 
+        Next (Isb var node )
+    /\ invform2trajform_consequence (bitvecIs (BITVEC v i) c) =
+        let node = map (\i. v^"<"^(int2str i)^">") (0 upto (i-1)) in 
+        let var = map (\i. bvariable (v^"<"^(int2str i)^">_")) (0 upto (i-1)) in  
+        Next (node bvAre var)
+    /\ invform2trajform_consequence (arrayIs (ARRAY v i1 i2) a c) = 
+        let node adr = map (\d. v^"<"^(int2str adr)^">"^"<"^(int2str d)^">") (0 upto (i2-1)) in 
+        let var adr  = map (\d. bvariable (v^"<"^(int2str adr)^">"^"<"^(int2str d)^">_")) (0 upto (i2-1)) in
+        let nodes = map3 (\i. node i) (0 upto (i1-1)) in 
+        let vars = map3  (\i. var i) (0 upto (i1-1)) in 
+        Next (nodes bvAre vars )
+;
+
+letrec inv2trajform_consequence [] = []
+    /\ inv2trajform_consequence (x:xs) = (invform2trajform_consequence x):(inv2trajform_consequence xs) ;
+
+//*****constraint*******
+letrec invform2trajform_constraint_ant (boolIs (BOOLEAN v) c) = 
+        ( c=bT =>  (bvariable v) | bNOT (bvariable v) )
+    /\ invform2trajform_constraint_ant (bitvecIs (BITVEC v i) c) =
+        let var = map (\i. bvariable (v^"<"^(int2str i)^">")) (0 upto (i-1)) in 
+        var valIs c 
+    /\ invform2trajform_constraint_ant (arrayIs (ARRAY v i1 i2) a c) =
+        let var = map (\d. bvariable (v^"<"^(int2str a)^">"^"<"^(int2str d)^">")) (0 upto (i2-1)) in 
+        let D = map (\d. bvariable (c^"<"^(int2str d)^">")) (0 upto (i2-1)) in 
+        bEqs var D 
+;
+
+letrec inv2trajform_constraint_ant [] = bT
+    /\ inv2trajform_constraint_ant  (x:xs) = (invform2trajform_constraint_ant x) bAND (inv2trajform_constraint_ant xs) ;
+;
+
+letrec invform2trajform_constraint_consequence (boolIs (BOOLEAN v) c) = 
+        ( c=bT =>  (bvariable (v^"_")) | bNOT (bvariable (v^"_")) )
+    /\ invform2trajform_constraint_consequence (bitvecIs (BITVEC v i) c) =
+        let var = map (\i. bvariable (v^"<"^(int2str i)^">_")) (0 upto (i-1)) in 
+        var valIs c 
+    /\ invform2trajform_constraint_consequence (arrayIs (ARRAY v i1 i2) a c) =
+        let var = map (\d. bvariable (v^"<"^(int2str a)^">"^"<"^(int2str d)^">_")) (0 upto (i2-1)) in 
+        let D = map (\d. bvariable (c^"<"^(int2str d)^">")) (0 upto (i2-1)) in 
+        bEqs var D 
+;
+
+letrec inv2trajform_constraint_consequence [] = bT
+    /\ inv2trajform_constraint_consequence  (x:xs) = (invform2trajform_constraint_consequence x) bAND (inv2trajform_constraint_consequence xs) ;
+;
+
+
+
